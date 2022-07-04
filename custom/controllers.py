@@ -12,20 +12,19 @@ class NSLCController(Controller):
         self.weights = None
         self.archive = list()
         self.received_archives = list()
-        self.received_weights = dict()
-        self.received_nm = dict()
         self.rob = Pyroborobo.get()
-        self.next_gen_every_it = 1000
+        self.next_gen_every_it = 400
         self.deactivated = False
         self.next_gen_in_it = self.next_gen_every_it
         self.objects_deposited = 0
+        self.archives_received = 0
         self.heuristic = None
         self.wait_it = 0
 
     def reset(self):
         if self.weights is None:
             self.weights = np.random.uniform(-1, 1, (self.nb_inputs(), 2))
-            archive_item = ArchiveItem(np.array([0]), self.weights.copy())
+            archive_item = ArchiveItem(np.array([0, 0]), self.weights.copy(), 0, 0)
             self.archive.append(archive_item)
 
     def step(self):
@@ -54,60 +53,37 @@ class NSLCController(Controller):
                     rob_position = self.absolute_position
 
                     if not obj.is_bound and not obj.placed and self.wait_it == 0:
+                        obj.is_bound = True
                         pickupHeuristic = PickupHeuristic(self, obj)
                         self.heuristic = pickupHeuristic
-                        obj.is_bound = True
 
                     else:
                         trans_speed, rot_speed = inputs @ self.weights
                         self.set_translation(np.clip(trans_speed, -1, 1))
                         self.set_rotation(np.clip(rot_speed, -1, 1))
-
+                else:
+                    trans_speed, rot_speed = inputs @ self.weights
+                    self.set_translation(np.clip(trans_speed, -1, 1))
+                    self.set_rotation(np.clip(rot_speed, -1, 1))
+                
                 if self.wait_it > 0:
                     self.wait_it -= 1
             else:
                 self.heuristic.step()
-            # Share weights
-            #self.share_weights()
+            # Share archive
             self.share_archive()
 
     def nb_inputs(self):
         return (1  # bias
                 + self.nb_sensors * 3  # cam inputs
+                + 2 #landmark
                 )
-
-    def share_weights(self):
-        for robot_controller in self.get_all_robot_controllers():
-            if robot_controller:
-                robot_controller.receive_weights(self.id, self.weights, self.objects_deposited)
 
     def share_archive(self):
         for robot_controller in self.get_all_robot_controllers():
             if robot_controller:
                 robot_controller.receive_archives(self.archive)
-
-    def receive_weights(self, rid, weights, objects_deposited):
-        dictLen = len(self.received_nm)
-        k = min(10, dictLen)
-        if dictLen > 0:
-            bdist = list()
-            for key, nm in self.received_nm.items():
-                bdist.append(abs(nm - objects_deposited))
-
-            bdist.sort()
-
-            sum = 0
-            for i in range (k):
-                sum = sum + bdist[i]
-            
-            p = sum/k
-            if(p > 0):
-                self.received_weights[rid] = (weights.copy())
-                self.received_nm[rid] = objects_deposited
-        
-        else:
-            self.received_weights[rid] = (weights.copy())
-            self.received_nm[rid] = objects_deposited
+                self.archives_received += 1
 
     def receive_archives(self, archive):
         self.received_archives.append(archive)
@@ -124,34 +100,39 @@ class NSLCController(Controller):
         objects_dist = np.where(is_objects, dists, 1)
         objects_angle = np.where(is_objects, sensors, -1)
 
-        inputs = np.concatenate([[1], robots_dist, walls_dist, objects_dist])
+        landmark_dist = self.get_closest_landmark_dist()
+        landmark_orient = self.get_closest_landmark_orientation()
+
+        inputs = np.concatenate([[1], robots_dist, walls_dist, objects_dist, [landmark_dist, landmark_orient]])
         assert(len(inputs) == self.nb_inputs())
         return inputs, objects_dist, objects_angle
 
     def new_generation(self):
-        bc = np.array([self.objects_deposited])
+        bc = np.array([self.objects_deposited, self.archives_received])
+        fitness = self.objects_deposited
         archiveLen = len(self.archive)
 
         k = min(50, archiveLen)
         if archiveLen > 0:
             bdist = list()
             for item in self.archive:
-                bdist.append(np.linalg.norm(bc - item.get_behaviour_char()))
+                bdist.append([np.linalg.norm(bc - item.get_behaviour_char()), item.fitness])
 
-            bdist.sort()
+            bdist.sort(key=lambda bdist:bdist[0])
 
             sum = 0
+            lcs = 0
             for i in range (k):
-                sum = sum + bdist[i]
+                sum = sum + bdist[i][0]
+                if bdist[i][1] < fitness:
+                    lcs += 1
             
             p = sum/k
-            if(p > 0):
-                newItem = ArchiveItem(bc, self.weights)
+            if(p > 80):
+                newItem = ArchiveItem(bc, self.weights, lcs, fitness)
                 self.archive.append(newItem)
 
         if self.received_archives:
-            #new_weights_key = np.random.choice(list(self.received_weights.keys()))
-            #new_weights = self.received_weights[new_weights_key]
             flattenedArchives = list(chain.from_iterable(self.received_archives))
             randomItem = np.random.choice(list(flattenedArchives))
             new_weights = randomItem.get_genome()
@@ -160,18 +141,15 @@ class NSLCController(Controller):
             new_weights = np.random.normal(new_weights, 0.1)
 
             self.weights = new_weights
-            self.received_weights.clear()
-            self.received_nm.clear()
             self.received_archives.clear()
             self.objects_deposited = 0
+            self.archives_received = 0
             self.deactivated = False
         else:
             self.deactivated = True
 
     def inspect(self, prefix=""):
         output = "inputs: \n" + str(self.get_inputs()) + "\n\n"
-        output += "received weights from: \n"
-        output += str(list(self.received_weights.keys()))
         output += "archive: \n"
         output += str(len(self.archive))
         return output

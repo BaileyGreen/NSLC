@@ -1,5 +1,6 @@
 from pyroborobo import MovableObject, Pyroborobo, SquareObject
 from custom.controllers import NSLCController
+from custom.world_observers import NSLCWorldObserver as NSLCWO
 
 class BallObject(MovableObject):
 
@@ -15,9 +16,9 @@ class BallObject(MovableObject):
     def is_pushed(self, id_, speed):
         super().is_pushed(id_, speed)
         p = self.position
-        if p[0] <= 100 and p[1] >= 300:
+        if p[0] >= NSLCWO.COLLECTION_START[0] and p[0] <= NSLCWO.COLLECTION_END[0] and p[1] >= NSLCWO.COLLECTION_START[1] and p[1] <= NSLCWO.COLLECTION_END[1]:
             if not self.placed:
-                print(f"I'm kicked by {id_} with position {p}")
+                self.set_color(255,0,0)
                 pyrr = Pyroborobo.get()
                 index_offset = pyrr.robot_index_offset
                 controllers = pyrr.controllers
