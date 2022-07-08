@@ -128,7 +128,9 @@ class NSLCController(Controller):
                     lcs += 1
             
             p = sum/k
-            if(p > 80):
+            threshold = 0.5 * p + 0.5 * lcs
+            
+            if(threshold > 40):
                 newItem = ArchiveItem(bc, self.weights, lcs, fitness)
                 self.archive.append(newItem)
 
@@ -156,7 +158,6 @@ class NSLCController(Controller):
 
     def increment_objects_deposited(self):
         self.objects_deposited += 1
-        print(f"{self.id}  Objects deposited: {self.objects_deposited}")
 
     def vec_between(start_v, end_v, check_v):
         se_v = np.cross(start_v, end_v)

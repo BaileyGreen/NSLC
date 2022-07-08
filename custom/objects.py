@@ -22,11 +22,13 @@ class BallObject(MovableObject):
                 pyrr = Pyroborobo.get()
                 index_offset = pyrr.robot_index_offset
                 controllers = pyrr.controllers
+                world_obs = pyrr.world_observer
                 
                 for c in controllers:
                     if (c.id + index_offset) == id_:
                         c.increment_objects_deposited()
                 self.placed = True
+                world_obs.increment_objects_placed()
 
     def inspect(self, prefix):
         return f"[INSPECT] Ball #{self.id}\n"

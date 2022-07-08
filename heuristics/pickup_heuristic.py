@@ -13,6 +13,7 @@ class PickupHeuristic(Heuristic):
         if self.object.placed:
             self.robot.heuristic = None
             self.object.is_bound = False
+        
         if self.prev_pos == self.robot.absolute_position:
             self.stationary_it += 1
         else:
