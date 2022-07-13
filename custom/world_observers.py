@@ -32,11 +32,8 @@ class NSLCWorldObserver(WorldObserver):
             robot.set_position(pos[0], pos[1])
 
         for i in range(NSLCWorldObserver.NB_OBJECTS):
-            obj = CObj.BallObject(i, {})
+            obj = CObj.MediumObject(i, {})
             obj = self.rob.add_object(obj)
-            obj.set_footprint_radius = 10
-            obj.set_radius = 6
-            obj.set_color(192, 255, 128)
             pos = NSLCWorldObserver.generate_random_position()
             while pos[0] >= NSLCWorldObserver.COLLECTION_START[0] and pos [0] <= NSLCWorldObserver.COLLECTION_END[0] and pos[1] >= NSLCWorldObserver.COLLECTION_START[1] and pos[1] <= NSLCWorldObserver.COLLECTION_END[1]:
                 pos = NSLCWorldObserver.generate_random_position()

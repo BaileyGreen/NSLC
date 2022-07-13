@@ -12,7 +12,7 @@ class PickupHeuristic(Heuristic):
     def step(self):
         if self.object.placed:
             self.robot.heuristic = None
-            self.object.is_bound = False
+            self.object.nb_bound -= 1
         
         if self.prev_pos == self.robot.absolute_position:
             self.stationary_it += 1
@@ -22,7 +22,7 @@ class PickupHeuristic(Heuristic):
         if self.stationary_it >= 50:
             self.robot.heuristic = None
             self.robot.wait_it = 100
-            self.object.is_bound = False
+            self.object.nb_bound -= 1
 
         r = 6
         angle = Heuristic.angleBetween(self.robot.absolute_position, (50, 350))

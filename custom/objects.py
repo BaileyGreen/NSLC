@@ -2,13 +2,26 @@ from pyroborobo import MovableObject, Pyroborobo, SquareObject
 from custom.controllers import NSLCController
 from custom.world_observers import NSLCWorldObserver as NSLCWO
 
-class BallObject(MovableObject):
+class EasyObject(MovableObject):
+
+    ROBOTS_REQ = 1
+    OBJECT_SIZE = 6
+    FOOTPRINT_SIZE = 10
+    COLOUR = (192, 255, 128)
 
     def __init__(self, id_, data):
         MovableObject.__init__(self, id_)
         self.data = data
         self.placed = False
-        self.is_bound = False
+        self.nb_bound = 0
+        self.unregister()
+        self.set_radius(type(self).OBJECT_SIZE)
+        self.set_footprint_radius(type(self).FOOTPRINT_SIZE)
+        red = type(self).COLOUR[0]
+        green = type(self).COLOUR[1]
+        blue = type(self).COLOUR[2]
+        self.set_color(red, green, blue)
+        self.register()
 
     def step(self):
         super().step()
@@ -32,3 +45,24 @@ class BallObject(MovableObject):
 
     def inspect(self, prefix):
         return f"[INSPECT] Ball #{self.id}\n"
+
+class MediumObject(EasyObject):
+
+    ROBOTS_REQ = 2
+    OBJECT_SIZE = 8
+    FOOTPRINT_SIZE = 12
+    COLOUR = (245, 174, 10)
+
+    def __init__(self, id_, data):
+        super().__init__(id_, data)
+
+class HardObject(EasyObject):
+
+    ROBOTS_REQ = 3
+    OBJECT_SIZE = 10
+    FOOTPRINT_SIZE = 14
+    COLOUR = (170, 10, 245)
+
+    def __init__(self, id_, data):
+        super().__init__(id_, data)
+

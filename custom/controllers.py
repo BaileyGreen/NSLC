@@ -1,7 +1,7 @@
 from pyroborobo import Controller, Pyroborobo
 from archive_item import ArchiveItem
 from itertools import chain
-from math import atan2, degrees
+from math import atan2, degrees, sqrt
 from heuristics.pickup_heuristic import PickupHeuristic
 import numpy as np
 
@@ -20,6 +20,8 @@ class NSLCController(Controller):
         self.archives_received = 0
         self.heuristic = None
         self.wait_it = 0
+        self.distance_travelled = 0
+        self.prev_pos = self.absolute_position
 
     def reset(self):
         if self.weights is None:
@@ -52,8 +54,8 @@ class NSLCController(Controller):
                     obj_position = obj.position
                     rob_position = self.absolute_position
 
-                    if not obj.is_bound and not obj.placed and self.wait_it == 0:
-                        obj.is_bound = True
+                    if obj.nb_bound < type(obj).ROBOTS_REQ and not obj.placed and self.wait_it == 0:
+                        obj.nb_bound += 1
                         pickupHeuristic = PickupHeuristic(self, obj)
                         self.heuristic = pickupHeuristic
 
@@ -73,10 +75,13 @@ class NSLCController(Controller):
             # Share archive
             self.share_archive()
 
+            cur_pos = self.absolute_position
+            self.distance_travelled += sqrt((cur_pos[0] - self.prev_pos[0])**2 + (cur_pos[1] - self.prev_pos[1])**2)
+            self.prev_pos = cur_pos
+
     def nb_inputs(self):
         return (1  # bias
                 + self.nb_sensors * 3  # cam inputs
-                + 2 #landmark
                 )
 
     def share_archive(self):
@@ -100,15 +105,12 @@ class NSLCController(Controller):
         objects_dist = np.where(is_objects, dists, 1)
         objects_angle = np.where(is_objects, sensors, -1)
 
-        landmark_dist = self.get_closest_landmark_dist()
-        landmark_orient = self.get_closest_landmark_orientation()
-
-        inputs = np.concatenate([[1], robots_dist, walls_dist, objects_dist, [landmark_dist, landmark_orient]])
+        inputs = np.concatenate([[1], robots_dist, walls_dist, objects_dist])
         assert(len(inputs) == self.nb_inputs())
         return inputs, objects_dist, objects_angle
 
     def new_generation(self):
-        bc = np.array([self.objects_deposited, self.archives_received])
+        bc = np.array([self.objects_deposited, self.distance_travelled])
         fitness = self.objects_deposited
         archiveLen = len(self.archive)
 
@@ -131,6 +133,7 @@ class NSLCController(Controller):
             threshold = 0.5 * p + 0.5 * lcs
             
             if(threshold > 40):
+                #print(threshold)
                 newItem = ArchiveItem(bc, self.weights, lcs, fitness)
                 self.archive.append(newItem)
 
@@ -146,6 +149,7 @@ class NSLCController(Controller):
             self.received_archives.clear()
             self.objects_deposited = 0
             self.archives_received = 0
+            self.distance_travelled = 0
             self.deactivated = False
         else:
             self.deactivated = True

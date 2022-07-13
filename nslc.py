@@ -1,5 +1,5 @@
 from pyroborobo import Pyroborobo, Controller, MovableObject
-from custom.objects import BallObject
+from custom.objects import EasyObject
 from custom.controllers import NSLCController
 from custom.world_observers import NSLCWorldObserver
 
@@ -8,11 +8,11 @@ class NSLC():
         self.rob = Pyroborobo.create("config/nslc.properties",
                             controller_class=NSLCController,
                             world_observer_class=NSLCWorldObserver,
-                            object_class_dict={'_default': BallObject})
+                            object_class_dict={'_default': EasyObject})
     def run(self):
         print(dir(Pyroborobo))
         self.rob.start()
-        self.rob.update(1000)
+        self.rob.update(10000)
 
         combined_archive = list()
         world_obs = self.rob.world_observer
