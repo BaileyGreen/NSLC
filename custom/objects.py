@@ -10,7 +10,7 @@ class EasyObject(MovableObject):
     COLOUR = (192, 255, 128)
 
     def __init__(self, id_, data):
-        MovableObject.__init__(self, id_)
+        super().__init__(id_)
         self.data = data
         self.placed = False
         self.nb_bound = 0
@@ -49,8 +49,8 @@ class EasyObject(MovableObject):
 class MediumObject(EasyObject):
 
     ROBOTS_REQ = 2
-    OBJECT_SIZE = 8
-    FOOTPRINT_SIZE = 12
+    OBJECT_SIZE = 10
+    FOOTPRINT_SIZE = 14
     COLOUR = (245, 174, 10)
 
     def __init__(self, id_, data):
@@ -59,8 +59,8 @@ class MediumObject(EasyObject):
 class HardObject(EasyObject):
 
     ROBOTS_REQ = 3
-    OBJECT_SIZE = 10
-    FOOTPRINT_SIZE = 14
+    OBJECT_SIZE = 14
+    FOOTPRINT_SIZE = 18
     COLOUR = (170, 10, 245)
 
     def __init__(self, id_, data):

@@ -24,12 +24,16 @@ class PickupHeuristic(Heuristic):
             self.robot.wait_it = 100
             self.object.nb_bound -= 1
 
-        r = 6
-        angle = Heuristic.angleBetween(self.robot.absolute_position, (50, 350))
-        angle = radians(angle)
-        obj_position = self.object.position
-        x = obj_position[0] + r * cos(angle)
-        y = obj_position[1] + r * sin(angle)
-        pos = (x, y)
-        self.moveTo(self.robot.absolute_position, pos)
-        self.prev_pos = self.robot.absolute_position
+        if self.object.nb_bound < type(self.object).ROBOTS_REQ:
+            self.robot.set_rotation(0)
+            self.robot.set_translation(0)
+        else:
+            r = 6
+            angle = Heuristic.angleBetween(self.robot.absolute_position, (50, 350))
+            angle = radians(angle)
+            obj_position = self.object.position
+            x = obj_position[0] + r * cos(angle)
+            y = obj_position[1] + r * sin(angle)
+            pos = (x, y)
+            self.moveTo(self.robot.absolute_position, pos)
+            self.prev_pos = self.robot.absolute_position

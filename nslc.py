@@ -10,7 +10,6 @@ class NSLC():
                             world_observer_class=NSLCWorldObserver,
                             object_class_dict={'_default': EasyObject})
     def run(self):
-        print(dir(Pyroborobo))
         self.rob.start()
         self.rob.update(10000)
 

@@ -65,8 +65,8 @@ class NSLCController(Controller):
                         self.set_rotation(np.clip(rot_speed, -1, 1))
                 else:
                     trans_speed, rot_speed = inputs @ self.weights
-                    self.set_translation(np.clip(trans_speed, -1, 1))
-                    self.set_rotation(np.clip(rot_speed, -1, 1))
+                    self.set_translation(np.tanh(trans_speed))
+                    self.set_rotation(np.tanh(rot_speed))
                 
                 if self.wait_it > 0:
                     self.wait_it -= 1
@@ -144,6 +144,7 @@ class NSLCController(Controller):
 
             # mutation
             new_weights = np.random.normal(new_weights, 0.1)
+            new_weights = np.clip(new_weights, -1, 1)
 
             self.weights = new_weights
             self.received_archives.clear()
