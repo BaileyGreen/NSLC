@@ -9,10 +9,10 @@ class NeuralNetwork:
         self.inputs = np.zeros(nb_inputs, dtype=int)
         self.outputs = np.zeros(nb_outputs, dtype=int)
         self.nb_neurons_per_layer = []
-        self.nb_neurons_per_layer[0] = nb_inputs
+        self.nb_neurons_per_layer.append(nb_inputs)
         for i in range(1, nb_layers-1):
-            self.nb_neurons_per_layer[1] = nb_neurons_hidden
-        self.nb_neurons_per_layer[nb_layers-1] = nb_outputs
+            self.nb_neurons_per_layer.append(nb_neurons_hidden)
+        self.nb_neurons_per_layer.append(nb_outputs)
         self.bias = bias
     
     def step(self):
@@ -26,14 +26,14 @@ class NeuralNetwork:
             tmp = np.zeros(nb_out)
 
             for i in range(len(curr_layer)):
-                for j in range(len(nb_out)):
+                for j in range(nb_out):
                     tmp[j] += curr_layer[i] * self.weights[weights_index]
                     weights_index += 1
 
-            for i in range(len(nb_out)):
+            for i in range(nb_out):
                 tmp[i] += self.bias
 
-            for i in range(len(nb.out)):
+            for i in range(nb_out):
                 tmp[i] = np.tanh(tmp[i])
 
             curr_layer = tmp
@@ -43,7 +43,8 @@ class NeuralNetwork:
     def get_nb_weights(self):
         nb_weights = 0
         for i in range(len(self.nb_neurons_per_layer)-1):
-            nb_weights += self.nb_neurons_per_layer[i] * nb_neurons_per_layer[i+1]
+            nb_weights += self.nb_neurons_per_layer[i] * self.nb_neurons_per_layer[i+1]
+        return nb_weights
 
     def set_weights(self, weights):
         self.weights = weights

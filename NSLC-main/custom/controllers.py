@@ -3,6 +3,8 @@ from archive_item import ArchiveItem
 from itertools import chain
 from math import atan2, degrees, sqrt
 from heuristics.pickup_heuristic import PickupHeuristic
+from heuristics.collision_avoidance_heuristic import CAHeuristic
+from neuralnetwork.neuralnetwork import NeuralNetwork
 import numpy as np
 
 class NSLCController(Controller):
@@ -13,6 +15,7 @@ class NSLCController(Controller):
         self.archive = list()
         self.received_archives = list()
         self.rob = Pyroborobo.get()
+        self.nn = NeuralNetwork([], self.nb_inputs(), 2, 8, 2, 1)
         self.next_gen_every_it = 400
         self.deactivated = False
         self.next_gen_in_it = self.next_gen_every_it
@@ -25,13 +28,14 @@ class NSLCController(Controller):
 
     def reset(self):
         if self.weights is None:
-            self.weights = np.random.uniform(-1, 1, (self.nb_inputs(), 2))
+            self.weights = np.random.uniform(-1, 1, self.nn.get_nb_weights())
+            self.nn.set_weights(self.weights)
             archive_item = ArchiveItem(np.array([0, 0]), self.weights.copy(), 0, 0)
             self.archive.append(archive_item)
 
     def step(self):
         self.next_gen_in_it -= 1
-        if self.next_gen_in_it < 0 or self.deactivated:
+        if self.next_gen_in_it < 0:
             self.new_generation()
             self.next_gen_in_it = self.next_gen_every_it
 
@@ -45,7 +49,6 @@ class NSLCController(Controller):
             i = self.get_inputs()
             inputs = i[0]
             objects_d = i[1]
-            objects_a = i[2]
 
             min_index = np.argmin(objects_d)
             if self.heuristic is None:
@@ -60,18 +63,22 @@ class NSLCController(Controller):
                         self.heuristic = pickupHeuristic
 
                     else:
-                        trans_speed, rot_speed = inputs @ self.weights
-                        self.set_translation(np.clip(trans_speed, -1, 1))
-                        self.set_rotation(np.clip(rot_speed, -1, 1))
+                        caHeuristic = CAHeuristic(self, obj)
+                        self.heuristic = caHeuristic
                 else:
-                    trans_speed, rot_speed = inputs @ self.weights
-                    self.set_translation(np.tanh(trans_speed))
-                    self.set_rotation(np.tanh(rot_speed))
+                    self.nn.set_inputs(inputs)
+                    self.nn.set_weights(self.weights)
+                    self.nn.step()
+                    out = self.nn.get_outputs()
+                    trans_speed, rot_speed = out
+                    self.set_translation(trans_speed)
+                    self.set_rotation(rot_speed)
                 
                 if self.wait_it > 0:
                     self.wait_it -= 1
             else:
                 self.heuristic.step()
+            
             # Share archive
             self.share_archive()
 
@@ -80,8 +87,7 @@ class NSLCController(Controller):
             self.prev_pos = cur_pos
 
     def nb_inputs(self):
-        return (1  # bias
-                + self.nb_sensors * 3  # cam inputs
+        return (self.nb_sensors  # cam inputs
                 )
 
     def share_archive(self):
@@ -95,7 +101,6 @@ class NSLCController(Controller):
 
     def get_inputs(self):
         dists = self.get_all_distances()
-        sensors = self.get_all_sensor_angles()
         is_robots = self.get_all_robot_ids() != -1
         is_walls = self.get_all_walls()
         is_objects = self.get_all_objects() != -1
@@ -103,11 +108,11 @@ class NSLCController(Controller):
         robots_dist = np.where(is_robots, dists, 1)
         walls_dist = np.where(is_walls, dists, 1)
         objects_dist = np.where(is_objects, dists, 1)
-        objects_angle = np.where(is_objects, sensors, -1)
 
-        inputs = np.concatenate([[1], robots_dist, walls_dist, objects_dist])
+        #inputs = np.concatenate([robots_dist, walls_dist, objects_dist])
+        inputs = dists
         assert(len(inputs) == self.nb_inputs())
-        return inputs, objects_dist, objects_angle
+        return inputs, objects_dist
 
     def new_generation(self):
         bc = np.array([self.objects_deposited, self.distance_travelled])
@@ -144,7 +149,6 @@ class NSLCController(Controller):
 
             # mutation
             new_weights = np.random.normal(new_weights, 0.1)
-            new_weights = np.clip(new_weights, -1, 1)
 
             self.weights = new_weights
             self.received_archives.clear()
@@ -163,18 +167,3 @@ class NSLCController(Controller):
 
     def increment_objects_deposited(self):
         self.objects_deposited += 1
-
-    def vec_between(start_v, end_v, check_v):
-        se_v = np.cross(start_v, end_v)
-
-        if(se_v >= 0):
-            return np.cross(start_v, check_v) >= 0 and np.cross(check_v, end_v) >= 0
-        else:
-            return not(np.cross(start_v, check_v) >= 0 and np.cross(check_v, end_v) >= 0)
-
-    def moveTo(self, cur_pos, pos):
-        angle = atan2(cur_pos[1] - pos[1], cur_pos[0] - pos[0])
-        angle = degrees(angle)
-
-        self.set_absolute_orientation(angle - 180)
-        self.set_translation(1)
