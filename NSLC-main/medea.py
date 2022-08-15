@@ -2,6 +2,7 @@ from pyroborobo import Pyroborobo, Controller, MovableObject
 from custom.objects import EasyObject
 from custom.controllers import mEDEAController
 from custom.world_observers import NSLCWorldObserver
+from statistics import mean
 
 class MEDEA():
     def __init__(self):
@@ -22,5 +23,5 @@ class MEDEA():
                     combined_archive.append(item)
         
         self.rob.close()
-        return [max(item.fitness for item in combined_archive), len(combined_archive), world_obs.objects_placed]
+        return [max(item.fitness for item in combined_archive), round(mean(item.fitness for item in combined_archive), 3), len(combined_archive), world_obs.objects_placed, world_obs.end_it]
 

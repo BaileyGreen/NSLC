@@ -15,6 +15,13 @@ class PickupHeuristic(Heuristic):
         #if self.object.placed:
             #self.robot.heuristic = None
             #self.object.nb_bound -= 1
+
+        if type(self.object).POINTS == 1:
+            self.robot.time_spent_small += 1
+        elif type(self.object).POINTS == 2:
+            self.robot.time_spent_medium += 1
+        else:
+            self.robot.time_spend_large += 1
         
         if self.prev_pos == self.robot.absolute_position:
             self.stationary_it += 1

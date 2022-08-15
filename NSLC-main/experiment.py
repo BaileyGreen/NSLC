@@ -1,4 +1,5 @@
 from nslc import NSLC
+from medea import MEDEA
 from custom.world_observers import NSLCWorldObserver
 import csv, os, sys, getopt
 
@@ -56,7 +57,7 @@ def main(argv):
             write.writerows(results)
     
     else:
-        fields = ["Max Fitness Individual", "Number of different genomes", "Total objects placed", "End Iteration"]
+        fields = ["Max Fitness Individual", "Average Fitness", "Number of different genomes", "Total objects placed", "End Iteration"]
 
         with open(filename, 'w') as f:
             write = csv.writer(f)

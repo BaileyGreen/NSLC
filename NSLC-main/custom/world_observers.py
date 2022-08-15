@@ -21,6 +21,7 @@ class NSLCWorldObserver(WorldObserver):
         self.objects_placed = 0
         self.iteration = 1
         self.end_it = 10000
+        self.finished = False
 
     def init_pre(self):
         super().init_pre()
@@ -73,16 +74,17 @@ class NSLCWorldObserver(WorldObserver):
 
     def step_post(self):
         super().step_post()
-        if self.objects_placed == NSLCWorldObserver.NB_OBJECTS:
+        if self.objects_placed == NSLCWorldObserver.NB_OBJECTS and not self.finished:
             self.end_it = self.iteration
+            self.finished = True
         self.iteration += 1
 
     def step_pre(self):
         super().step_pre()
 
     def generate_random_position():
-        x = np.random.randint(13, NSLCWorldObserver.ARENA_WIDTH-13)
-        y = np.random.randint(17, NSLCWorldObserver.ARENA_HEIGHT-17)
+        x = np.random.randint(13, NSLCWorldObserver.ARENA_WIDTH-20)
+        y = np.random.randint(17, NSLCWorldObserver.ARENA_HEIGHT-25)
         position = (x, y)
         return position
 

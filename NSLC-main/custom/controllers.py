@@ -13,6 +13,7 @@ class mEDEAController(Controller):
         super().__init__(wm)
         self.weights = None
         self.received_weights = dict()
+        self.archive = list()
         self.rob = Pyroborobo.get()
         self.nn = NeuralNetwork([], self.nb_inputs(), 2, 8, 2, 1)
         self.next_gen_every_it = 400
@@ -21,11 +22,15 @@ class mEDEAController(Controller):
         self.objects_deposited = 0
         self.heuristic = None
         self.wait_it = 0
+        self.distance_travelled = 0
+        self.prev_pos = self.absolute_position
 
     def reset(self):
         if self.weights is None:
             self.weights = np.random.uniform(-1, 1, self.nn.get_nb_weights())
             self.nn.set_weights(self.weights)
+            archive_item = ArchiveItem(np.array([0, 0]), self.weights.copy(), 0, 0)
+            self.archive.append(archive_item)
 
     def step(self):
         self.next_gen_in_it -= 1
@@ -46,7 +51,7 @@ class mEDEAController(Controller):
 
             min_index = np.argmin(objects_d)
             if self.heuristic is None:
-                if objects_d[min_index] < 1:
+                if objects_d[min_index] < 0.5:
                     obj = self.get_object_instance_at(min_index)
                     obj_position = obj.position
                     rob_position = self.absolute_position
@@ -76,6 +81,10 @@ class mEDEAController(Controller):
             # Share weights
             self.share_weights()
 
+            cur_pos = self.absolute_position
+            self.distance_travelled += sqrt((cur_pos[0] - self.prev_pos[0])**2 + (cur_pos[1] - self.prev_pos[1])**2)
+            self.prev_pos = cur_pos
+
     def nb_inputs(self):
         return (self.nb_sensors * 4 # cam inputs
                 )
@@ -104,12 +113,40 @@ class mEDEAController(Controller):
         return inputs, objects_dist
 
     def new_generation(self):
+        bc = np.array([self.objects_deposited, self.distance_travelled])
+        fitness = self.objects_deposited
+        archiveLen = len(self.archive)
+
+        k = min(50, archiveLen)
+        if archiveLen > 0:
+            bdist = list()
+            for item in self.archive:
+                bdist.append([np.linalg.norm(bc - item.get_behaviour_char()), item.fitness])
+
+            bdist.sort(key=lambda bdist:bdist[0])
+
+            sum = 0
+            lcs = 0
+            for i in range (k):
+                sum = sum + bdist[i][0]
+                if bdist[i][1] < fitness:
+                    lcs += 1
+            
+            p = sum/k
+            threshold = 0.5 * p + 0.5 * lcs
+            
+            if(threshold > 40):
+                #print(threshold)
+                newItem = ArchiveItem(bc, self.weights, lcs, fitness)
+                self.archive.append(newItem)
+        
         if self.received_weights:
             new_weights_key = np.random.choice(list(self.received_weights.keys()))
             new_weights = self.received_weights[new_weights_key]
             # mutation
             new_weights = np.random.normal(new_weights, 0.1)
             self.objects_deposited = 0
+            self.distance_travelled = 0
             self.weights = new_weights
             self.received_weights.clear()
             self.deactivated = False
@@ -143,6 +180,10 @@ class NSLCController(Controller):
         self.heuristic = None
         self.wait_it = 0
         self.distance_travelled = 0
+        self.time_spent_small = 0
+        self.time_spent_medium = 0
+        self.time_spend_large = 0
+        self.diversity = []
         self.prev_pos = self.absolute_position
 
     def reset(self):
@@ -238,7 +279,7 @@ class NSLCController(Controller):
         fitness = self.objects_deposited
         archiveLen = len(self.archive)
 
-        k = min(50, archiveLen)
+        k = min(200, archiveLen)
         if archiveLen > 0:
             bdist = list()
             for item in self.archive:
@@ -261,12 +302,18 @@ class NSLCController(Controller):
                 newItem = ArchiveItem(bc, self.weights, lcs, fitness)
                 self.archive.append(newItem)
 
+        d = [self.time_spent_small, self.time_spent_medium, self.time_spend_large]
+        self.diversity.append(d)
+
+        self.time_spent_small = 0
+        self.time_spent_medium = 0
+        self.time_spend_large = 0
+
         if self.received_archives:
             flattenedArchives = list(chain.from_iterable(self.received_archives))
             randomItem = np.random.choice(list(flattenedArchives))
             new_weights = randomItem.get_genome()
-
-            # mutation
+            
             new_weights = np.random.normal(new_weights, 0.1)
 
             self.weights = new_weights
