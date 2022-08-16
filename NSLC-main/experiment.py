@@ -49,21 +49,38 @@ def main(argv):
         print('Invalid method parameter')
         sys.exit()
         
-    results.append(r)
-    filename = 'results_' + str(method) + '_' + str(difficulty) + '.csv'
-    if os.path.exists(filename):
-        with open(filename, 'a') as f:
+    results = r
+
+    perf_filename = 'performance_' + str(method) + '_' + str(difficulty) + '.csv'
+    if os.path.exists(perf_filename):
+        with open(perf_filename, 'a') as f:
             write = csv.writer(f)
-            write.writerows(results)
+            write.writerow(results[0])
     
     else:
         fields = ["Max Fitness Individual", "Average Fitness", "Number of different genomes", "Total objects placed", "End Iteration"]
 
-        with open(filename, 'w') as f:
+        with open(perf_filename, 'w') as f:
             write = csv.writer(f)
             
             write.writerow(fields)
-            write.writerows(results)
+            write.writerow(results[0])
+
+    div_filename = 'diversity_' + str(method) + '_' + str(difficulty) + '.csv'
+    if os.path.exists(div_filename):
+        with open(div_filename, 'a') as f:
+            write = csv.writer(f)
+            write.writerow([])
+            write.writerows(results[1])
+    
+    else:
+        fields = ["Generation", "Time A", "Time B", "Time C", "Distance"]
+
+        with open(div_filename, 'w') as f:
+            write = csv.writer(f)
+            
+            write.writerow(fields)
+            write.writerows(results[1])
 
 if __name__ == "__main__":
     main(sys.argv[1:])

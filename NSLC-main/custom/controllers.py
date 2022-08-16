@@ -16,13 +16,17 @@ class mEDEAController(Controller):
         self.archive = list()
         self.rob = Pyroborobo.get()
         self.nn = NeuralNetwork([], self.nb_inputs(), 2, 8, 2, 1)
-        self.next_gen_every_it = 400
+        self.next_gen_every_it = 1000
         self.deactivated = False
         self.next_gen_in_it = self.next_gen_every_it
         self.objects_deposited = 0
         self.heuristic = None
         self.wait_it = 0
         self.distance_travelled = 0
+        self.time_spent_small = 0
+        self.time_spent_medium = 0
+        self.time_spend_large = 0
+        self.diversity = []
         self.prev_pos = self.absolute_position
 
     def reset(self):
@@ -115,30 +119,15 @@ class mEDEAController(Controller):
     def new_generation(self):
         bc = np.array([self.objects_deposited, self.distance_travelled])
         fitness = self.objects_deposited
-        archiveLen = len(self.archive)
+        newItem = ArchiveItem(bc, self.weights, None, fitness)
+        self.archive.append(newItem)
 
-        k = min(50, archiveLen)
-        if archiveLen > 0:
-            bdist = list()
-            for item in self.archive:
-                bdist.append([np.linalg.norm(bc - item.get_behaviour_char()), item.fitness])
+        d = [self.time_spent_small, self.time_spent_medium, self.time_spend_large]
+        self.diversity.append(d)
 
-            bdist.sort(key=lambda bdist:bdist[0])
-
-            sum = 0
-            lcs = 0
-            for i in range (k):
-                sum = sum + bdist[i][0]
-                if bdist[i][1] < fitness:
-                    lcs += 1
-            
-            p = sum/k
-            threshold = 0.5 * p + 0.5 * lcs
-            
-            if(threshold > 40):
-                #print(threshold)
-                newItem = ArchiveItem(bc, self.weights, lcs, fitness)
-                self.archive.append(newItem)
+        self.time_spent_small = 0
+        self.time_spent_medium = 0
+        self.time_spend_large = 0
         
         if self.received_weights:
             new_weights_key = np.random.choice(list(self.received_weights.keys()))
@@ -172,7 +161,7 @@ class NSLCController(Controller):
         self.received_archives = list()
         self.rob = Pyroborobo.get()
         self.nn = NeuralNetwork([], self.nb_inputs(), 2, 8, 2, 1)
-        self.next_gen_every_it = 400
+        self.next_gen_every_it = 1000
         self.deactivated = False
         self.next_gen_in_it = self.next_gen_every_it
         self.objects_deposited = 0
